@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<history>
+   <processor signature="arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -nostartfiles -Map=PREHEAT.map -O0 --gc-sections -LC:\CooCox\CoIDE\configuration\ProgramData\PREHEAT -TC:\CooCox\CoIDE\configuration\ProgramData\PREHEAT/arm-gcc-link.ld -g">
+      <target file="PREHEAT.elf" lastModified="1589abe6dd0">
+         <source file="..\obj\teclado.o" lastModified="1589abe5b53"/>
+         <source file="..\obj\startup_stm32f4xx.o" lastModified="1589abe5c4f"/>
+         <source file="..\obj\main.o" lastModified="1589abe5da0"/>
+         <source file="..\obj\stm32f4xx_rcc.o" lastModified="1589abe5f00"/>
+         <source file="..\obj\stm32f4xx_it.o" lastModified="1589abe6015"/>
+         <source file="..\obj\stm32f4xx_adc.o" lastModified="1589abe6166"/>
+         <source file="..\obj\printf.o" lastModified="1589abe629c"/>
+         <source file="..\obj\stm32f4xx_gpio.o" lastModified="1589abe63cd"/>
+         <source file="..\obj\system_stm32f4xx.o" lastModified="1589abe64ea"/>
+         <source file="..\obj\syscalls.o" lastModified="1589abe6605"/>
+         <source file="..\obj\adc.o" lastModified="1589abe6723"/>
+         <source file="..\obj\stm32_ub_lcd_2x16.o" lastModified="1589abe6866"/>
+         <source file="..\obj\stm32f4xx_tim.o" lastModified="1589abe6a1a"/>
+      </target>
+   </processor>
+</history>
