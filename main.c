@@ -8,7 +8,7 @@
  *-TECLADO
  *
  *Falta implementar:
- *-Ajuste PID
+ *
  *-MENU
  *-MEDIDOR DE POTENCIA
  *
@@ -54,11 +54,6 @@ static __IO uint32_t TimingDelay;
 int main(void)
 	{
 
-	int32_t duty; //   DUTY !!! (ciclo de trabajo)
-	int32_t pid_error=0;
-	int32_t temperatura_Actual=0,temperatura_Deseada=500; //
-
-
 	SystemInit(); // inicializa el sistema
 
 	TIM_Config(); // config timers para PWM y demas
@@ -67,7 +62,9 @@ int main(void)
 
     declarar_leds();     // GPIO leds pin 11 12 13 14
 
-	//declarar_boton();    // GPIO boton
+	Init_Teclado();   // inicializa el teclado de la lib teclado.c
+
+    //declarar_boton();    // GPIO boton
 
 	adc_inicializar();   // Inicializa ADC polling
 
@@ -86,17 +83,60 @@ int main(void)
 	//teclado
 
 	char stringtemperaturadeseada[4];
-	int temperaturaporteclado=0;
+	char bufferteclado[4]={0,0,0,0};
+	int temperaturaporteclado[4]={0,0,0,0}, tempSet=0;
+	int i=0,flag=0,ingreso=0;
 
-	temperaturaporteclado=Leer_Teclado();
-	sprintf(stringtemperaturadeseada,"%d",temperaturaporteclado);
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"PreHeat 1.0");
+	Delay(2000);
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"Ingrese temp:");
+
+	while(flag==0)  // flag que se hace 1 cuando se tomaron 3 valores
+	{
+	for(i=0;i<4;i++) // for de 4 valores
+	{
+		ingreso=0;
+		while(ingreso==0) // ingreso se hace 1 cuando se ingreso un valor del teclado osea distinto de 16
+		{
+
+		temperaturaporteclado[i]=Leer_Teclado();  // usa la funcion leer para leer de teclado.c
+
+			/* anula los botones no usados */
+			if((temperaturaporteclado[i]!=16)&&(temperaturaporteclado[i]!=12)&&(temperaturaporteclado[i]!=13)&&(temperaturaporteclado[i]!=14)&&(temperaturaporteclado[i]!=15)&&(temperaturaporteclado[i]!=10)&&(temperaturaporteclado[i]!=11))
+			{
+				sprintf(bufferteclado,"%d",temperaturaporteclado[i]);
+				UB_LCD_2x16_String(i,1,bufferteclado);
+
+				Delay(500); // delay para que no tome mas de un valor cuando de presiona
+				break;  // sale porque entro un numero distinto de 16 y demas letras y simbolos
+
+			}
+
+		}
+		if(i==3){flag=1;}  // hasta que se llene el buffer
+	}
+	}
+	UB_LCD_2x16_Clear();
+
+	tempSet=armarEntero(temperaturaporteclado,4); // funcion que transforma el buffer en un INT
+
+	sprintf(stringtemperaturadeseada,"%d",tempSet);    // muestra la temperatura por pantalla
+	UB_LCD_2x16_String(0,1,stringtemperaturadeseada);
+
+	Delay(1000);
 
 	//teclado
 
-	double errSum=0,lastErr=0;
-	int32_t kp=PID_PARAM_KP,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
-	double dErr=0;
-	int i=0;
+	int32_t duty; //   DUTY !!! (ciclo de trabajo)
+	int32_t pid_error=0;
+	int32_t temperatura_Actual=0,temperatura_Deseada=500;
+	//double errSum=0,lastErr=0;
+	int32_t kp=PID_PARAM_KP;      //,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
+	//double dErr=0;
+
+	temperatura_Deseada=tempSet;   // fijo la temperatura deseada obtenida del teclado
 
 	while (1)
     	{
@@ -111,15 +151,14 @@ int main(void)
 		temperatura_Actual=temperatura_Actual/100;
 
 
-
-
     	sprintf(stringtemperatura,"%d",devolver_temperatura_en_grados());   // pasa de un entero a un String para imprimir
 
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
     	UB_LCD_2x16_String(0,1,stringtemperatura);    // usa una funcion ya definida para imprimir un string
     	UB_LCD_2x16_String(3,1,"\176");
-    	UB_LCD_2x16_String(4,1,stringtemperaturadeseada);
+    	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
+    	UB_LCD_2x16_String(9,1,"       ");
     	Delay(1000);  // 50Hz, 50 ondas por seg si uso medio segundo (0.5seg) tengo control sobre la onda... ideal 1 seg
 
     	//color_segun_temperatura();
