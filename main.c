@@ -56,15 +56,8 @@ int main(void)
 
 	int32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
-	int32_t temperatura_Actual=0,temperatura_Deseada=400; //
+	int32_t temperatura_Actual=0,temperatura_Deseada=500; //
 
-	arm_pid_instance_f32 PID;
-
-	/* Set PID parameters */
-		/* Set this for your needs */
-	PID.Kp = PID_PARAM_KP;		/* Proporcional */
-	PID.Ki = PID_PARAM_KI;		/* Integral */
-	PID.Kd = PID_PARAM_KD;		/* Derivative */
 
 	SystemInit(); // inicializa el sistema
 
@@ -133,28 +126,26 @@ int main(void)
 //    	errSum+=(pid_error*0.001);
 //    	dErr=(pid_error-lastErr)/0.001;
 
-    	//duty=   pid_error;   //+   ki*errSum   +  kd*dErr;
+    	duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;
+
+    	duty= kp  * duty;
 
 //    	lastErr=pid_error;
 
 
-    	/* Check overflow, duty cycle in percent */
-    	    				/*	if (duty > 100) {
-    	    						duty = 100;
-    	    					}
-    	    					if (duty < 0) {
-    	    						duty = 0;
-    	    					}
-*/
+    	 // Anti sobrecarga del duty
+    	if (duty > 100) {duty = 100;}
+    	if (duty < 0)   {duty = 0;}
 
 
-    	pid_error= (pid_error);   // como el duty va de 498 a 0 se lo adapta
-    	pid_error= (pid_error);
+    	duty   = (duty*499);   // como el duty va de 498 a 0 se lo adapta
+    	duty   = (duty/100);
+
     	GPIO_ResetBits(GPIOD,GPIO_Pin_15);
 
-    	iniciarPWM(pid_error);
+    	iniciarPWM(duty);
 
-    	printf("%d      %d        \n",temperatura_Actual,pid_error);
+    	printf(" %d  %d \n",temperatura_Actual,duty);
 
     	//TIM_OCInitStructure.TIM_Pulse=duty;
 
