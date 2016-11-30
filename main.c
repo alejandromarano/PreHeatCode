@@ -27,7 +27,7 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		1		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KP		2		/* Proporcional */  //PARAMETROS PID  //1    //6.06
 #define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
 #define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
@@ -82,7 +82,16 @@ int main(void)
 	// 		para lograr este valor divido 168 M ticks / 1000 = 168.000 ticks
 
 	char stringtemperatura[4]; // String donde se guarda la temperatura
+
+	//teclado
+
 	char stringtemperaturadeseada[4];
+	int temperaturaporteclado=0;
+
+	temperaturaporteclado=Leer_Teclado();
+	sprintf(stringtemperaturadeseada,"%d",temperaturaporteclado);
+
+	//teclado
 
 	double errSum=0,lastErr=0;
 	int32_t kp=PID_PARAM_KP,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
@@ -103,13 +112,15 @@ int main(void)
 
 
 
+
     	sprintf(stringtemperatura,"%d",devolver_temperatura_en_grados());   // pasa de un entero a un String para imprimir
 
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
     	UB_LCD_2x16_String(0,1,stringtemperatura);    // usa una funcion ya definida para imprimir un string
     	UB_LCD_2x16_String(3,1,"\176");
-    	Delay(20);
+    	UB_LCD_2x16_String(4,1,stringtemperaturadeseada);
+    	Delay(1000);  // 50Hz, 50 ondas por seg si uso medio segundo (0.5seg) tengo control sobre la onda... ideal 1 seg
 
     	//color_segun_temperatura();
 
