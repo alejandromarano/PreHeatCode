@@ -149,7 +149,7 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   TimingDelay_Decrement();
-  color_segun_temperatura(); // invoca la funcion de los led a gran velocidad
+  //color_segun_temperatura(); // invoca la funcion de los led a gran velocidad
 }
 
 /******************************************************************************/

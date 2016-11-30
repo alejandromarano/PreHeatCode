@@ -27,14 +27,14 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		100			/* Proporcional */  //PARAMETROS PID  //1
-#define PID_PARAM_KI		0.025		/* Integral */                        //0.05
-#define PID_PARAM_KD		20			/* Derivative */                      //0.25
+#define PID_PARAM_KP		1		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
+#define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
 void Delay(__IO uint32_t nTime);  //funcion Delay que usa SysTick
 int32_t devolver_temperatura_en_grados(); // funcion PHinclude
 void color_segun_temperatura();
-void iniciarPWM(int duty);
+void iniciarPWM(int32_t duty);
 void TIM_Config(void);
 void arm_pid_init_f32();
 
@@ -54,10 +54,9 @@ static __IO uint32_t TimingDelay;
 int main(void)
 	{
 
-	uint16_t duty; //   DUTY !!! (ciclo de trabajo)
-	float pid_error=0;
-
-	int32_t temperatura_Actual=0,temperatura_Deseada=700;
+	int32_t duty; //   DUTY !!! (ciclo de trabajo)
+	int32_t pid_error=0;
+	int32_t temperatura_Actual=0,temperatura_Deseada=400; //
 
 	arm_pid_instance_f32 PID;
 
@@ -66,15 +65,6 @@ int main(void)
 	PID.Kp = PID_PARAM_KP;		/* Proporcional */
 	PID.Ki = PID_PARAM_KI;		/* Integral */
 	PID.Kd = PID_PARAM_KD;		/* Derivative */
-
-	/* Initialize PID system, float32_t format */
-	PID.A0 = PID_PARAM_KP + PID_PARAM_KI + PID_PARAM_KD; //The derived gain, A0 = Kp + Ki + Kd . */
-	PID.A1 = (-PID_PARAM_KP - (2*PID_PARAM_KD) );  //The derived gain, A1 = -Kp - 2Kd. */
-    PID.A2 = PID_PARAM_KD; // The derived gain, A2 = Kd . */
-
-	PID.state[0]=0;
-	PID.state[1]=0;
-	PID.state[2]=0;
 
 	SystemInit(); // inicializa el sistema
 
@@ -100,12 +90,23 @@ int main(void)
 
 	char stringtemperatura[4]; // String donde se guarda la temperatura
 
-
+	double errSum=0,lastErr=0;
+	int32_t kp=PID_PARAM_KP,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
+	double dErr=0;
+	int i=0;
 
 	while (1)
     	{
 
-		temperatura_Actual=devolver_temperatura_en_grados();
+		for(i=0;i<100;i++)
+		{
+
+			temperatura_Actual+=devolver_temperatura_en_grados();
+
+		}
+
+		temperatura_Actual=temperatura_Actual/100;
+
 
 		/*
     	sprintf(stringtemperatura,"%d",devolver_temperatura_en_grados());   // pasa de un entero a un String para imprimir
@@ -120,24 +121,48 @@ int main(void)
 		Delay(1); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN
 
     	/* Calculate error */
-    	pid_error =  temperatura_Deseada-temperatura_Actual;
+    	pid_error = temperatura_Deseada-temperatura_Actual;
+
+
 
     					/* Calculate PID here, argument is error */
     					/* Output data will be returned, we will use it as duty cycle parameter */
-    	duty = arm_pid_f32(&PID, pid_error);
+    	//duty = arm_pid_f32(&PID, pid_error);
 
-    		/* Check overflow, duty cycle in percent */
-    					if (duty > 100) {
-    						duty = 100;
-    					} else if (duty < 0) {
-    						duty = 0;
-    					}
 
-    	duty= ((498/100)*(duty));   // como el duty va de 498 a 0 se lo adapta
+//    	errSum+=(pid_error*0.001);
+//    	dErr=(pid_error-lastErr)/0.001;
 
-    	iniciarPWM(duty);
+    	//duty=   pid_error;   //+   ki*errSum   +  kd*dErr;
+
+//    	lastErr=pid_error;
+
+
+    	/* Check overflow, duty cycle in percent */
+    	    				/*	if (duty > 100) {
+    	    						duty = 100;
+    	    					}
+    	    					if (duty < 0) {
+    	    						duty = 0;
+    	    					}
+*/
+
+
+    	pid_error= (pid_error);   // como el duty va de 498 a 0 se lo adapta
+    	pid_error= (pid_error);
+    	GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+
+    	iniciarPWM(pid_error);
+
+    	printf("%d      %d        \n",temperatura_Actual,pid_error);
 
     	//TIM_OCInitStructure.TIM_Pulse=duty;
+
+    	 if(duty==0)   //duty = 0
+    		    	    {
+    		    	    	GPIO_SetBits(GPIOD,GPIO_Pin_15);
+    		    	    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_12);
+    		    	    }
 
     	}
 	}
@@ -176,20 +201,20 @@ void color_segun_temperatura()
 
 				int32_t temperaturaengrados=devolver_temperatura_en_grados();
 
-	    	    if(temperaturaengrados<270)   //menor de 27 grados enciende el led VERDE
+	    	    if(temperaturaengrados<500)   //menor de 500 grados enciende el led VERDE
 	    	    {
 	    	    	GPIO_SetBits(GPIOD,GPIO_Pin_12);
 	    	    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
 	    	    }
 
-	    	    if(temperaturaengrados>=270) //Mayor o igual a  27 grados enciende el led ROJO
+	    	    if(temperaturaengrados>=500) //Mayor o igual a  500 grados enciende el led ROJO
 	    	       {
 	    	    	GPIO_SetBits(GPIOD,GPIO_Pin_13);
 	    	       	GPIO_ResetBits(GPIOD,GPIO_Pin_12|GPIO_Pin_14|GPIO_Pin_15);
 	    	       }
 }
 
-void iniciarPWM(int duty)
+void iniciarPWM(int32_t duty)
 {
 	 /* Compute the prescaler value */
 		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1; // 1MHZ

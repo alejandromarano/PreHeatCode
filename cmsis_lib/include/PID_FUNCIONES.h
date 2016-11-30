@@ -9,10 +9,8 @@ typedef struct
     float Kd;               /**< The derivative gain. */
   } arm_pid_instance_f32;
 
-static __INLINE float arm_pid_f32(
-					arm_pid_instance_f32 * S,
-					float in)
-  {
+float arm_pid_f32(arm_pid_instance_f32 * S,float in)
+ {
     float out;
 
     /* y[n] = y[n-1] + A0 * x[n] + A1 * x[n-1] + A2 * x[n-2]  */
@@ -25,5 +23,4 @@ static __INLINE float arm_pid_f32(
 
     /* return to application */
     return (out);
-
-  }
+ }

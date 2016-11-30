@@ -1,20 +1,22 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <history>
    <processor signature="arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -nostartfiles -Map=PREHEAT.map -O0 --gc-sections -LC:\CooCox\CoIDE\configuration\ProgramData\PREHEAT -TC:\CooCox\CoIDE\configuration\ProgramData\PREHEAT/arm-gcc-link.ld -g">
-      <target file="PREHEAT.elf" lastModified="1589abe6dd0">
-         <source file="..\obj\teclado.o" lastModified="1589abe5b53"/>
-         <source file="..\obj\startup_stm32f4xx.o" lastModified="1589abe5c4f"/>
-         <source file="..\obj\main.o" lastModified="1589abe5da0"/>
-         <source file="..\obj\stm32f4xx_rcc.o" lastModified="1589abe5f00"/>
-         <source file="..\obj\stm32f4xx_it.o" lastModified="1589abe6015"/>
-         <source file="..\obj\stm32f4xx_adc.o" lastModified="1589abe6166"/>
-         <source file="..\obj\printf.o" lastModified="1589abe629c"/>
-         <source file="..\obj\stm32f4xx_gpio.o" lastModified="1589abe63cd"/>
-         <source file="..\obj\system_stm32f4xx.o" lastModified="1589abe64ea"/>
-         <source file="..\obj\syscalls.o" lastModified="1589abe6605"/>
-         <source file="..\obj\adc.o" lastModified="1589abe6723"/>
-         <source file="..\obj\stm32_ub_lcd_2x16.o" lastModified="1589abe6866"/>
-         <source file="..\obj\stm32f4xx_tim.o" lastModified="1589abe6a1a"/>
+      <target file="PREHEAT.elf" lastModified="158b287b870">
+         <source file="..\obj\semihosting.o" lastModified="158b287a4a6"/>
+         <source file="..\obj\teclado.o" lastModified="158b287a602"/>
+         <source file="..\obj\startup_stm32f4xx.o" lastModified="158b287a6ff"/>
+         <source file="..\obj\main.o" lastModified="158b287a87a"/>
+         <source file="..\obj\stm32f4xx_rcc.o" lastModified="158b287aa0a"/>
+         <source file="..\obj\stm32f4xx_it.o" lastModified="158b287ab29"/>
+         <source file="..\obj\stm32f4xx_adc.o" lastModified="158b287ac94"/>
+         <source file="..\obj\printf.o" lastModified="158b287adc8"/>
+         <source file="..\obj\stm32f4xx_gpio.o" lastModified="158b287af04"/>
+         <source file="..\obj\sh_cmd.o" lastModified="158b287af3a"/>
+         <source file="..\obj\system_stm32f4xx.o" lastModified="158b287b066"/>
+         <source file="..\obj\syscalls.o" lastModified="158b287b17f"/>
+         <source file="..\obj\adc.o" lastModified="158b287b299"/>
+         <source file="..\obj\stm32_ub_lcd_2x16.o" lastModified="158b287b3ce"/>
+         <source file="..\obj\stm32f4xx_tim.o" lastModified="158b287b5a4"/>
       </target>
    </processor>
 </history>
