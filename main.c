@@ -82,6 +82,7 @@ int main(void)
 	// 		para lograr este valor divido 168 M ticks / 1000 = 168.000 ticks
 
 	char stringtemperatura[4]; // String donde se guarda la temperatura
+	char stringtemperaturadeseada[4];
 
 	double errSum=0,lastErr=0;
 	int32_t kp=PID_PARAM_KP,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
@@ -101,34 +102,28 @@ int main(void)
 		temperatura_Actual=temperatura_Actual/100;
 
 
-		/*
+
     	sprintf(stringtemperatura,"%d",devolver_temperatura_en_grados());   // pasa de un entero a un String para imprimir
 
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
     	UB_LCD_2x16_String(0,1,stringtemperatura);    // usa una funcion ya definida para imprimir un string
     	UB_LCD_2x16_String(3,1,"\176");
-    	Delay(250);
-		*/
+    	Delay(20);
+
     	//color_segun_temperatura();
-		Delay(1); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN
 
-    	/* Calculate error */
+		//Delay(250); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN MANEJANDO ONDA 50Hz
+
+    	/* Calcular error*/
     	pid_error = temperatura_Deseada-temperatura_Actual;
-
-
-
-    					/* Calculate PID here, argument is error */
-    					/* Output data will be returned, we will use it as duty cycle parameter */
-    	//duty = arm_pid_f32(&PID, pid_error);
-
 
 //    	errSum+=(pid_error*0.001);
 //    	dErr=(pid_error-lastErr)/0.001;
 
     	duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;
 
-    	duty= kp  * duty;
+    	duty=  kp  * duty;
 
 //    	lastErr=pid_error;
 
@@ -141,19 +136,20 @@ int main(void)
     	duty   = (duty*499);   // como el duty va de 498 a 0 se lo adapta
     	duty   = (duty/100);
 
-    	GPIO_ResetBits(GPIOD,GPIO_Pin_15);
+    	iniciarPWM(duty);  //TIM_OCInitStructure.TIM_Pulse=duty;
 
-    	iniciarPWM(duty);
-
-    	printf(" %d  %d \n",temperatura_Actual,duty);
-
-    	//TIM_OCInitStructure.TIM_Pulse=duty;
+    	//printf(" %d  %d \n",temperatura_Actual,duty);  // !!!!!!! si no lo tenes en DEBUG!!! FRENA EL PROGRAMA!!!!
 
     	 if(duty==0)   //duty = 0
     		    	    {
     		    	    	GPIO_SetBits(GPIOD,GPIO_Pin_15);
     		    	    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_12);
     		    	    }
+    	 if(duty>0)
+    	 	 	 	 	{
+    	    		    	GPIO_SetBits(GPIOD,GPIO_Pin_14);
+    	    		    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_15|GPIO_Pin_12);
+    	 	 	 	 	}
 
     	}
 	}
@@ -194,7 +190,7 @@ void color_segun_temperatura()
 
 	    	    if(temperaturaengrados<500)   //menor de 500 grados enciende el led VERDE
 	    	    {
-	    	    	GPIO_SetBits(GPIOD,GPIO_Pin_12);
+	    	    	GPIO_ToggleBits(GPIOD,GPIO_Pin_12);
 	    	    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
 	    	    }
 
