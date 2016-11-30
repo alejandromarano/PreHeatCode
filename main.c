@@ -84,14 +84,14 @@ int main(void)
 
 	char stringtemperaturadeseada[4];
 	char bufferteclado[4]={0,0,0,0};
-	int temperaturaporteclado[4]={0,0,0,0}, tempSet=0;
+	int temperaturaporteclado[4]={0,0,0,0}, temperatura_deseada=0;
 	int i=0,flag=0,ingreso=0;
 
 	UB_LCD_2x16_Clear();
 	UB_LCD_2x16_String(0,0,"PreHeat 1.0");
 	Delay(2000);
 	UB_LCD_2x16_Clear();
-	UB_LCD_2x16_String(0,0,"Ingrese temp:");
+	UB_LCD_2x16_String(0,0,"Temp? [0 a 1000]");
 
 	while(flag==0)  // flag que se hace 1 cuando se tomaron 3 valores
 	{
@@ -118,25 +118,37 @@ int main(void)
 		if(i==3){flag=1;}  // hasta que se llene el buffer
 	}
 	}
+
 	UB_LCD_2x16_Clear();
 
-	tempSet=armarEntero(temperaturaporteclado,4); // funcion que transforma el buffer en un INT
+	temperatura_deseada=armarEntero(temperaturaporteclado,4); // funcion que transforma el buffer en un INT
 
-	sprintf(stringtemperaturadeseada,"%d",tempSet);    // muestra la temperatura por pantalla
+	sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);    // muestra la temperatura por pantalla
 	UB_LCD_2x16_String(0,1,stringtemperaturadeseada);
 
-	Delay(1000);
-
-	//teclado
+	Delay(2000);
 
 	int32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
-	int32_t temperatura_Actual=0,temperatura_Deseada=500;
+	int32_t temperatura_Actual=0;
 	//double errSum=0,lastErr=0;
 	int32_t kp=PID_PARAM_KP;      //,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
 	//double dErr=0;
 
-	temperatura_Deseada=tempSet;   // fijo la temperatura deseada obtenida del teclado
+	if(temperatura_deseada>1000)
+	{
+		UB_LCD_2x16_Clear();
+		UB_LCD_2x16_String(0,0,"Sobrecarga");
+		UB_LCD_2x16_String(0,1,"temp = 1000");
+		temperatura_deseada=1000;
+		sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);
+		Delay(2000);
+	}
+
+
+	  // fijo la temperatura deseada obtenida del teclado
+
+
 
 	while (1)
     	{
@@ -166,7 +178,7 @@ int main(void)
 		//Delay(250); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN MANEJANDO ONDA 50Hz
 
     	/* Calcular error*/
-    	pid_error = temperatura_Deseada-temperatura_Actual;
+    	pid_error = temperatura_deseada-temperatura_Actual;
 
 //    	errSum+=(pid_error*0.001);
 //    	dErr=(pid_error-lastErr)/0.001;
