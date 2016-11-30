@@ -27,20 +27,18 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		2		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KP		1		/* Proporcional */  //PARAMETROS PID  //1    //6.06
 #define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
 #define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
 void Delay(__IO uint32_t nTime);  //funcion Delay que usa SysTick
 int32_t devolver_temperatura_en_grados(); // funcion PHinclude
 void color_segun_temperatura();
-void iniciarPWM(int32_t duty);
+void iniciarPWM(void);
 void TIM_Config(void);
-void arm_pid_init_f32();
 
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;   //variable para el timer y PWM
 TIM_OCInitTypeDef  TIM_OCInitStructure;   //variable para el timer y PWM
-
 
 uint16_t PrescalerValue = 0;
 
@@ -70,6 +68,8 @@ int main(void)
 
 	SysTick_Config(SystemCoreClock / 1000);
 
+	iniciarPWM();
+
 	// Ejemplo:
 	// HCLK= 168MHz
 	// Requerimiento= 1 mseg
@@ -79,13 +79,13 @@ int main(void)
 	// 		para lograr este valor divido 168 M ticks / 1000 = 168.000 ticks
 
 	char stringtemperatura[4]; // String donde se guarda la temperatura
-
-	//teclado
-
 	char stringtemperaturadeseada[4];
 	char bufferteclado[4]={0,0,0,0};
+	char stringduty[4]={0,0,0,0};
 	int temperaturaporteclado[4]={0,0,0,0}, temperatura_deseada=0;
-	int i=0,flag=0,ingreso=0;
+	int i=0,flag=0,ingreso=0,bandera=0;
+
+	// INICIO DEL MENU //
 
 	UB_LCD_2x16_Clear();
 	UB_LCD_2x16_String(0,0,"PreHeat 1.0");
@@ -128,9 +128,9 @@ int main(void)
 
 	Delay(2000);
 
-	int32_t duty; //   DUTY !!! (ciclo de trabajo)
+	uint32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
-	int32_t temperatura_Actual=0;
+	uint32_t temperatura_actual=0;
 	//double errSum=0,lastErr=0;
 	int32_t kp=PID_PARAM_KP;      //,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
 	//double dErr=0;
@@ -156,14 +156,14 @@ int main(void)
 		for(i=0;i<100;i++)
 		{
 
-			temperatura_Actual+=devolver_temperatura_en_grados();
+			temperatura_actual+=devolver_temperatura_en_grados();
 
 		}
 
-		temperatura_Actual=temperatura_Actual/100;
+		temperatura_actual=temperatura_actual/100;
 
 
-    	sprintf(stringtemperatura,"%d",devolver_temperatura_en_grados());   // pasa de un entero a un String para imprimir
+    	sprintf(stringtemperatura,"%d",temperatura_actual);   // pasa de un entero a un String para imprimir
 
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
@@ -171,21 +171,37 @@ int main(void)
     	UB_LCD_2x16_String(3,1,"\176");
     	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
     	UB_LCD_2x16_String(9,1,"       ");
-    	Delay(1000);  // 50Hz, 50 ondas por seg si uso medio segundo (0.5seg) tengo control sobre la onda... ideal 1 seg
+    	Delay(750);  // 50Hz, 50 ondas por seg si uso medio segundo (0.5seg) tengo control sobre la onda... ideal 1 seg
 
     	//color_segun_temperatura();
 
 		//Delay(250); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN MANEJANDO ONDA 50Hz
 
     	/* Calcular error*/
-    	pid_error = temperatura_deseada-temperatura_Actual;
+    	pid_error = temperatura_deseada-temperatura_actual;
+
 
 //    	errSum+=(pid_error*0.001);
 //    	dErr=(pid_error-lastErr)/0.001;
 
-    	duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;
+    	if(pid_error<0)
+    	{
 
-    	duty=  kp  * duty;
+    		pid_error=0;   // porque duty no tiene signo (uint32_t)
+
+    	}
+
+    	//if(bandera==0)
+    	//{
+    	//	duty   =   pid_error - 50;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
+    	//}
+
+    	//if(bandera==1)
+    	//{
+    	    duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
+    	//}
+
+    	duty   =  kp  * duty;
 
 //    	lastErr=pid_error;
 
@@ -195,10 +211,13 @@ int main(void)
     	if (duty < 0)   {duty = 0;}
 
 
-    	duty   = (duty*499);   // como el duty va de 498 a 0 se lo adapta
+    	duty   = (duty*499);   // como el duty va de 499 a 0 se lo adapta
     	duty   = (duty/100);
 
-    	iniciarPWM(duty);  //TIM_OCInitStructure.TIM_Pulse=duty;
+    	TIM_OCInitStructure.TIM_Pulse = duty; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
+
+    	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+
 
     	//printf(" %d  %d \n",temperatura_Actual,duty);  // !!!!!!! si no lo tenes en DEBUG!!! FRENA EL PROGRAMA!!!!
 
@@ -212,6 +231,12 @@ int main(void)
     	    		    	GPIO_SetBits(GPIOD,GPIO_Pin_14);
     	    		    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_15|GPIO_Pin_12);
     	 	 	 	 	}
+
+    	 sprintf(stringduty,"%d",duty);   // pasa de un entero a un String para imprimir
+
+    	 UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
+    	 UB_LCD_2x16_String(9,1,stringduty);
+    	 Delay(250);
 
     	}
 	}
@@ -263,15 +288,16 @@ void color_segun_temperatura()
 	    	       }
 }
 
-void iniciarPWM(int32_t duty)
+void iniciarPWM(void)
 {
 	 /* Compute the prescaler value */
-		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1; // 1MHZ
+		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1; // 1KHz
+
 
 	//PWM PWM PWM PWM PWM PWM PWM PWM PMW
 		/* Time base configuration */
-		  TIM_TimeBaseStructure.TIM_Period = 499; //499
-		  TIM_TimeBaseStructure.TIM_Prescaler =PrescalerValue ;
+		  TIM_TimeBaseStructure.TIM_Period = 1000 - 1;    // HAY QUE TRABAJAR SOBRE ONDA DE 50Hz
+		  TIM_TimeBaseStructure.TIM_Prescaler =1680 - 1 ;
 		  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
 		  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -280,7 +306,7 @@ void iniciarPWM(int32_t duty)
 		  /* PWM1 Mode configuration: Channel1 */
 		  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
 		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-		  TIM_OCInitStructure.TIM_Pulse = duty;                         // DUTY !!!
+		  TIM_OCInitStructure.TIM_Pulse = 0; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
 		  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 
 		  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
@@ -293,23 +319,3 @@ void iniciarPWM(int32_t duty)
 		  TIM_Cmd(TIM3, ENABLE);
 		//PWM PWM PWM PWM PWM PWM PWM PWM PMW
 }
-
-/*void control_PID(arm_pid_instance_f32 *PID,int temperatura_Deseada, uint16_t duty)
-{
-	int32_t temperatura_Actual=devolver_temperatura_en_grados();
-
-	float pid_error =  temperatura_Deseada-temperatura_Actual;
-
-	duty = arm_pid_f32(PID, pid_error);
-
-    		//Check overflow, duty cycle in percent
-    					if (duty > 100) {
-    						duty = 100;
-    					} else if (duty < 0) {
-    						duty = 0;
-    					}
-
-    	duty= ((490/100)*(duty));
-
-    	iniciarPWM(duty);
-}*/
