@@ -27,7 +27,7 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		1		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KP		3		/* Proporcional */  //PARAMETROS PID  //1    //6.06
 #define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
 #define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
@@ -68,22 +68,14 @@ int main(void)
 
 	SysTick_Config(SystemCoreClock / 1000);
 
-	iniciarPWM();
+	iniciarPWM(); // declaracion del PWM
 
-	// Ejemplo:
-	// HCLK= 168MHz
-	// Requerimiento= 1 mseg
-	// 		1seg --- 168 Mticks
-	// 		1ms ---- x
-	// 		x = 168.000 ticks
-	// 		para lograr este valor divido 168 M ticks / 1000 = 168.000 ticks
-
-	char stringtemperatura[4]; // String donde se guarda la temperatura
+	char stringtemperatura[4],stringzona[1]; // String donde se guarda la temperatura
 	char stringtemperaturadeseada[4];
 	char bufferteclado[4]={0,0,0,0};
 	char stringduty[4]={0,0,0,0};
 	int temperaturaporteclado[4]={0,0,0,0}, temperatura_deseada=0;
-	int i=0,flag=0,ingreso=0,bandera=0;
+	int i=0,flag=0,ingreso=0,zona_seleccionada=0;
 
 	// INICIO DEL MENU //
 
@@ -92,6 +84,8 @@ int main(void)
 	Delay(2000);
 	UB_LCD_2x16_Clear();
 	UB_LCD_2x16_String(0,0,"Temp? [0 a 1000]");
+
+	// INGRESO DE TEMPERATURA //
 
 	while(flag==0)  // flag que se hace 1 cuando se tomaron 3 valores
 	{
@@ -123,10 +117,55 @@ int main(void)
 
 	temperatura_deseada=armarEntero(temperaturaporteclado,4); // funcion que transforma el buffer en un INT
 
+	UB_LCD_2x16_String(0,0,"Usted selecciono:");
 	sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);    // muestra la temperatura por pantalla
 	UB_LCD_2x16_String(0,1,stringtemperaturadeseada);
 
 	Delay(2000);
+
+	if(temperatura_deseada>1000) // control de sobrecarga MAX 100 GRADOS
+		{
+			UB_LCD_2x16_Clear();
+			UB_LCD_2x16_String(0,0,"Sobrecarga");
+			UB_LCD_2x16_String(0,1,"temp = 1000");
+			temperatura_deseada=1000;
+			sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);
+			Delay(2000);
+		}
+
+	// INGRESO DE ZONA //
+
+	flag=0;	// reset de flag
+	i=0;
+
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"Zona? [1 a 3]");
+
+	while(flag==0)  // flag que se hace 1 cuando se tomaron 3 valores
+	{
+
+		zona_seleccionada=Leer_Teclado();  // usa la funcion leer para leer de teclado.c
+
+			/* anula los botones no usados */
+			if((zona_seleccionada!=16)&&(zona_seleccionada!=12)&&(zona_seleccionada!=13)&&(zona_seleccionada!=14)&&(zona_seleccionada!=15)&&(zona_seleccionada!=10)&&(zona_seleccionada!=11))
+			{
+				sprintf(bufferteclado,"%d",zona_seleccionada);
+				UB_LCD_2x16_String(i,1,bufferteclado);
+				flag=1;
+				Delay(500); // delay para que no tome mas de un valor cuando de presiona
+				break;  // sale porque entro un numero distinto de 16 y demas letras y simbolos
+
+			}
+	}
+
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"Usted selecciono:");
+	UB_LCD_2x16_String(0,1,"Zona:");
+	sprintf(stringzona,"%d",zona_seleccionada);    // muestra la temperatura por pantalla
+	UB_LCD_2x16_String(5,1,stringzona);
+
+	Delay(2000);
+
 
 	uint32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
@@ -135,25 +174,10 @@ int main(void)
 	int32_t kp=PID_PARAM_KP;      //,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
 	//double dErr=0;
 
-	if(temperatura_deseada>1000)
-	{
-		UB_LCD_2x16_Clear();
-		UB_LCD_2x16_String(0,0,"Sobrecarga");
-		UB_LCD_2x16_String(0,1,"temp = 1000");
-		temperatura_deseada=1000;
-		sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);
-		Delay(2000);
-	}
-
-
-	  // fijo la temperatura deseada obtenida del teclado
-
-
-
 	while (1)
     	{
 
-		for(i=0;i<100;i++)
+		for(i=0;i<100;i++)   // promedio de 100 muestras para mantener el valor estable
 		{
 
 			temperatura_actual+=devolver_temperatura_en_grados();
@@ -171,7 +195,7 @@ int main(void)
     	UB_LCD_2x16_String(3,1,"\176");
     	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
     	UB_LCD_2x16_String(9,1,"       ");
-    	Delay(750);  // 50Hz, 50 ondas por seg si uso medio segundo (0.5seg) tengo control sobre la onda... ideal 1 seg
+    	Delay(750);
 
     	//color_segun_temperatura();
 
@@ -211,7 +235,7 @@ int main(void)
     	if (duty < 0)   {duty = 0;}
 
 
-    	duty   = (duty*499);   // como el duty va de 499 a 0 se lo adapta
+    	duty   = (duty*1000);   // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
     	duty   = (duty/100);
 
     	TIM_OCInitStructure.TIM_Pulse = duty; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
@@ -291,8 +315,10 @@ void color_segun_temperatura()
 void iniciarPWM(void)
 {
 	 /* Compute the prescaler value */
-		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1; // 1KHz
+		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1;
 
+      /*TIM_TimeBaseStructure.TIM_Prescaler = 1680 - 1;  // 84MHz/1680 = 50kHz
+      TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz */
 
 	//PWM PWM PWM PWM PWM PWM PWM PWM PMW
 		/* Time base configuration */
