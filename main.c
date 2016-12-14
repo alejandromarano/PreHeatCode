@@ -3,13 +3,14 @@
  *
  *LO IMPLEMENTADO:
  *-DISPLAY 16X2
- *-LM35 (1)
- *-PID
+ *-LM35 (2)
+ *-PID (PROPORCIONAL)
  *-TECLADO
+ *-MENU
  *
  *Falta implementar:
  *
- *-MENU
+ *
  *-MEDIDOR DE POTENCIA
  *
  *  Adelante y suerte
@@ -34,13 +35,15 @@
 void Delay(__IO uint32_t nTime);  //funcion Delay que usa SysTick
 int32_t devolver_temperatura_en_grados(); // funcion PHinclude
 void color_segun_temperatura();
-void iniciarPWM(void);
+void iniciarPWM(int zona);
 void TIM_Config(void);
 
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;   //variable para el timer y PWM
 TIM_OCInitTypeDef  TIM_OCInitStructure;   //variable para el timer y PWM
 
 uint16_t PrescalerValue = 0;
+
+int sensor_numero=0;
 
 #define MAX_ADC	4095.0    // resolucion de ADC 12bit
 
@@ -67,8 +70,6 @@ int main(void)
 	adc_inicializar();   // Inicializa ADC polling
 
 	SysTick_Config(SystemCoreClock / 1000);
-
-	iniciarPWM(); // declaracion del PWM
 
 	char stringtemperatura[4],stringzona[1]; // String donde se guarda la temperatura
 	char stringtemperaturadeseada[4];
@@ -146,8 +147,8 @@ int main(void)
 
 		zona_seleccionada=Leer_Teclado();  // usa la funcion leer para leer de teclado.c
 
-			/* anula los botones no usados */
-			if((zona_seleccionada!=16)&&(zona_seleccionada!=12)&&(zona_seleccionada!=13)&&(zona_seleccionada!=14)&&(zona_seleccionada!=15)&&(zona_seleccionada!=10)&&(zona_seleccionada!=11))
+			/* anula los botones no usados solo se usa 1 2 3 */
+			if((zona_seleccionada!=16)&&(zona_seleccionada!=12)&&(zona_seleccionada!=13)&&(zona_seleccionada!=14)&&(zona_seleccionada!=15)&&(zona_seleccionada!=10)&&(zona_seleccionada!=11)&&(zona_seleccionada!=4)&&(zona_seleccionada!=5)&&(zona_seleccionada!=6)&&(zona_seleccionada!=7)&&(zona_seleccionada!=8)&&(zona_seleccionada!=9)&&(zona_seleccionada!=0))
 			{
 				sprintf(bufferteclado,"%d",zona_seleccionada);
 				UB_LCD_2x16_String(i,1,bufferteclado);
@@ -166,6 +167,41 @@ int main(void)
 
 	Delay(2000);
 
+	// INGRESO DE NUMERO DE SENSOR //
+
+	flag=0;	// reset de flag
+	i=0;
+
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"Sensor? [1 a 2]");
+
+	while(flag==0)  // flag que se hace 1 cuando se tomaron 2 valores
+	{
+
+		sensor_numero=Leer_Teclado();  // usa la funcion leer para leer de teclado.c
+
+			/* anula los botones no usados solo se usa 1 2 */
+			if((sensor_numero!=16)&&(sensor_numero!=12)&&(sensor_numero!=13)&&(sensor_numero!=3)&&(sensor_numero!=14)&&(sensor_numero!=15)&&(sensor_numero!=10)&&(sensor_numero!=11)&&(sensor_numero!=4)&&(sensor_numero!=5)&&(sensor_numero!=6)&&(sensor_numero!=7)&&(sensor_numero!=8)&&(sensor_numero!=9)&&(sensor_numero!=0))
+			{
+				sprintf(bufferteclado,"%d",sensor_numero);
+				UB_LCD_2x16_String(i,1,bufferteclado);
+				flag=1;
+				Delay(500); // delay para que no tome mas de un valor cuando de presiona
+				break;  // sale porque entro un numero distinto de 16 y demas letras y simbolos
+
+			}
+	}
+
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0,0,"Usted selecciono:");
+	UB_LCD_2x16_String(0,1,"Sensor:");
+	sprintf(stringzona,"%d",sensor_numero);    // muestra la temperatura por pantalla
+	UB_LCD_2x16_String(7,1,stringzona);
+
+
+	Delay(2000);
+
+	iniciarPWM(zona_seleccionada); // declaracion del PWM
 
 	uint32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
@@ -285,7 +321,14 @@ int32_t devolver_temperatura_en_grados()
 {
 	int32_t temperatura=0;
 
-	temperatura=adc_leer_cuentas();   // Lee el ADC de la funcion adc.h y PHinclude
+	if(sensor_numero==1)
+	{
+	temperatura=adc_leer_cuentas_PC1();   // Lee el ADC de la funcion adc.h y PHinclude
+	}
+	if(sensor_numero==2)
+	{
+	temperatura=adc_leer_cuentas_PC2();   // Lee el ADC de la funcion adc.h y PHinclude
+	}
 
 	temperatura=((temperatura*3000)/4095);  // de Tension de ADC a Grados centigrados
 
@@ -312,15 +355,12 @@ void color_segun_temperatura()
 	    	       }
 }
 
-void iniciarPWM(void)
+void iniciarPWM(int zona)
 {
-	 /* Compute the prescaler value */
-		  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1;
+         /*TIM_TimeBaseStructure.TIM_Prescaler = 1680 - 1;  // 84MHz/1680 = 50kHz
+         TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz */
 
-      /*TIM_TimeBaseStructure.TIM_Prescaler = 1680 - 1;  // 84MHz/1680 = 50kHz
-      TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz */
-
-	//PWM PWM PWM PWM PWM PWM PWM PWM PMW
+	    //PWM PWM PWM PWM PWM PWM PWM PWM PMW
 		/* Time base configuration */
 		  TIM_TimeBaseStructure.TIM_Period = 1000 - 1;    // HAY QUE TRABAJAR SOBRE ONDA DE 50Hz
 		  TIM_TimeBaseStructure.TIM_Prescaler =1680 - 1 ;
@@ -339,7 +379,30 @@ void iniciarPWM(void)
 
 		  TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
 
-		  TIM_ARRPreloadConfig(TIM3, ENABLE);
+		  if(zona>=2)
+		  {
+		  /* PWM1 Mode configuration: Channel2 */
+		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+		  TIM_OCInitStructure.TIM_Pulse = 0;
+
+		  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
+
+		  TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
+		  }
+
+		  if(zona==3)
+		  {
+		  /* PWM1 Mode configuration: Channel3 */
+		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+		  TIM_OCInitStructure.TIM_Pulse = 0;
+
+		  TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+
+		  TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
+		  }
+
+
+   		  TIM_ARRPreloadConfig(TIM3, ENABLE);
 
 		  /* TIM3 enable counter */
 		  TIM_Cmd(TIM3, ENABLE);
