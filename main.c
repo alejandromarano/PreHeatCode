@@ -28,14 +28,13 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		3		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KP		100		/* Proporcional */  //PARAMETROS PID  //1    //6.06
 #define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
 #define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
 void Delay(__IO uint32_t nTime);  //funcion Delay que usa SysTick
 int32_t devolver_temperatura_en_grados(); // funcion PHinclude
-void color_segun_temperatura();
-void iniciarPWM(int zona);
+void iniciarPWM();
 void TIM_Config(void);
 
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;   //variable para el timer y PWM
@@ -65,16 +64,14 @@ int main(void)
 
 	Init_Teclado();   // inicializa el teclado de la lib teclado.c
 
-    //declarar_boton();    // GPIO boton
-
 	adc_inicializar();   // Inicializa ADC polling
 
 	SysTick_Config(SystemCoreClock / 1000);
 
 	char stringtemperatura[4],stringzona[1]; // String donde se guarda la temperatura
-	char stringtemperaturadeseada[4];
-	char bufferteclado[4]={0,0,0,0};
-	char stringduty[4]={0,0,0,0};
+	char stringtemperaturadeseada[4];       // String de temperatura deseada
+	char bufferteclado[4]={0,0,0,0};        // String Buffer de char para guardar los numeros tomados por teclado
+	char stringduty[4]={0,0,0,0};           // String de ciclo de trabajo
 	int temperaturaporteclado[4]={0,0,0,0}, temperatura_deseada=0;
 	int i=0,flag=0,ingreso=0,zona_seleccionada=0;
 
@@ -201,7 +198,7 @@ int main(void)
 
 	Delay(2000);
 
-	iniciarPWM(zona_seleccionada); // declaracion del PWM
+	iniciarPWM(); // declaracion del PWM
 
 	uint32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
@@ -213,7 +210,9 @@ int main(void)
 	while (1)
     	{
 
-		for(i=0;i<100;i++)   // promedio de 100 muestras para mantener el valor estable
+
+		/* promedio de 100 muestras para mantener el valor estable*/
+		for(i=0;i<100;i++)
 		{
 
 			temperatura_actual+=devolver_temperatura_en_grados();
@@ -222,6 +221,7 @@ int main(void)
 
 		temperatura_actual=temperatura_actual/100;
 
+		/*-------------------------------------------------------*/
 
     	sprintf(stringtemperatura,"%d",temperatura_actual);   // pasa de un entero a un String para imprimir
 
@@ -232,10 +232,6 @@ int main(void)
     	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
     	UB_LCD_2x16_String(9,1,"       ");
     	Delay(750);
-
-    	//color_segun_temperatura();
-
-		//Delay(250); // DELAY NECESARIO PARA QUE CONVERSIONES Y QUE EL PWM SE ACTIVE BIEN MANEJANDO ONDA 50Hz
 
     	/* Calcular error*/
     	pid_error = temperatura_deseada-temperatura_actual;
@@ -251,15 +247,9 @@ int main(void)
 
     	}
 
-    	//if(bandera==0)
-    	//{
-    	//	duty   =   pid_error - 50;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
-    	//}
 
-    	//if(bandera==1)
-    	//{
-    	    duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
-    	//}
+    	duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
+
 
     	duty   =  kp  * duty;
 
@@ -276,8 +266,19 @@ int main(void)
 
     	TIM_OCInitStructure.TIM_Pulse = duty; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
 
-    	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+    	// SEGUN LA ZONA SE ENCIENDE 1 2 o 3 PWM
 
+    	TIM_OC1Init(TIM3, &TIM_OCInitStructure);  // ZONA 1
+
+    	if(zona_seleccionada>=2)  // ZONA 2 = ZONA 2 + ZONA 1
+    	{
+    	TIM_OC2Init(TIM3, &TIM_OCInitStructure);
+    	}
+
+    	if(zona_seleccionada==3) // ZONA 3 = ZONA 3 + ZONA 2 + ZONA 1
+    	{
+    	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+    	}
 
     	//printf(" %d  %d \n",temperatura_Actual,duty);  // !!!!!!! si no lo tenes en DEBUG!!! FRENA EL PROGRAMA!!!!
 
@@ -292,11 +293,16 @@ int main(void)
     	    		    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_15|GPIO_Pin_12);
     	 	 	 	 	}
 
+
+    	 /*
+
     	 sprintf(stringduty,"%d",duty);   // pasa de un entero a un String para imprimir
 
+
     	 UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
-    	 UB_LCD_2x16_String(9,1,stringduty);
-    	 Delay(250);
+    	 UB_LCD_2x16_String(0,0,"Ciclo de trabajo:");
+    	 UB_LCD_2x16_String(0,1,stringduty);
+    	 Delay(500); */
 
     	}
 	}
@@ -323,11 +329,11 @@ int32_t devolver_temperatura_en_grados()
 
 	if(sensor_numero==1)
 	{
-	temperatura=adc_leer_cuentas_PC1();   // Lee el ADC de la funcion adc.h y PHinclude
+	temperatura=adc_leer_cuentas_PC1();   // Lee el ADC1 (PC1) de la funcion adc.h y PHinclude
 	}
 	if(sensor_numero==2)
 	{
-	temperatura=adc_leer_cuentas_PC2();   // Lee el ADC de la funcion adc.h y PHinclude
+	temperatura=adc_leer_cuentas_PC2();   // Lee el ADC2 (PC2) de la funcion adc.h y PHinclude
 	}
 
 	temperatura=((temperatura*3000)/4095);  // de Tension de ADC a Grados centigrados
@@ -335,27 +341,7 @@ int32_t devolver_temperatura_en_grados()
 	return temperatura;
 }
 
-
-void color_segun_temperatura()
-{
-				//GPIO_ResetBits(GPIOD,GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15); //restart todos los led
-
-				int32_t temperaturaengrados=devolver_temperatura_en_grados();
-
-	    	    if(temperaturaengrados<500)   //menor de 500 grados enciende el led VERDE
-	    	    {
-	    	    	GPIO_ToggleBits(GPIOD,GPIO_Pin_12);
-	    	    	GPIO_ResetBits(GPIOD,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
-	    	    }
-
-	    	    if(temperaturaengrados>=500) //Mayor o igual a  500 grados enciende el led ROJO
-	    	       {
-	    	    	GPIO_SetBits(GPIOD,GPIO_Pin_13);
-	    	       	GPIO_ResetBits(GPIOD,GPIO_Pin_12|GPIO_Pin_14|GPIO_Pin_15);
-	    	       }
-}
-
-void iniciarPWM(int zona)
+void iniciarPWM()
 {
          /*TIM_TimeBaseStructure.TIM_Prescaler = 1680 - 1;  // 84MHz/1680 = 50kHz
          TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz */
@@ -369,7 +355,7 @@ void iniciarPWM(int zona)
 
 		  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
 
-		  /* PWM1 Mode configuration: Channel1 */
+		  /* PWM1 Mode configuration: Channel1    ---------------------------------------------------------- */
 		  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
 		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
 		  TIM_OCInitStructure.TIM_Pulse = 0; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
@@ -379,32 +365,28 @@ void iniciarPWM(int zona)
 
 		  TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
 
-		  if(zona>=2)
-		  {
-		  /* PWM1 Mode configuration: Channel2 */
+
+		  /* PWM1 Mode configuration: Channel2    ---------------------------------------------------------- */
 		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
 		  TIM_OCInitStructure.TIM_Pulse = 0;
 
 		  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
 
 		  TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
-		  }
 
-		  if(zona==3)
-		  {
-		  /* PWM1 Mode configuration: Channel3 */
+
+		  /* PWM1 Mode configuration: Channel3    -----------------------------------------------------------*/
 		  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
 		  TIM_OCInitStructure.TIM_Pulse = 0;
 
 		  TIM_OC3Init(TIM3, &TIM_OCInitStructure);
 
 		  TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
-		  }
-
 
    		  TIM_ARRPreloadConfig(TIM3, ENABLE);
 
 		  /* TIM3 enable counter */
 		  TIM_Cmd(TIM3, ENABLE);
-		//PWM PWM PWM PWM PWM PWM PWM PWM PMW
+
+		  //PWM PWM PWM PWM PWM PWM PWM PWM PMW
 }
