@@ -28,9 +28,9 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		100		/* Proporcional */  //PARAMETROS PID  //1    //6.06
-#define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
-#define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
+#define PID_PARAM_KP		3		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+//#define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
+//#define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
 void Delay(__IO uint32_t nTime);  //funcion Delay que usa SysTick
 int32_t devolver_temperatura_en_grados(); // funcion PHinclude
@@ -118,6 +118,7 @@ int main(void)
 	UB_LCD_2x16_String(0,0,"Usted selecciono:");
 	sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);    // muestra la temperatura por pantalla
 	UB_LCD_2x16_String(0,1,stringtemperaturadeseada);
+	UB_LCD_2x16_String(3,1,"/223");
 
 	Delay(2000);
 
@@ -125,7 +126,7 @@ int main(void)
 		{
 			UB_LCD_2x16_Clear();
 			UB_LCD_2x16_String(0,0,"Sobrecarga");
-			UB_LCD_2x16_String(0,1,"temp = 1000");
+			UB_LCD_2x16_String(0,1,"temp = 1000\223");
 			temperatura_deseada=1000;
 			sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);
 			Delay(2000);
@@ -228,9 +229,9 @@ int main(void)
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
     	UB_LCD_2x16_String(0,1,stringtemperatura);    // usa una funcion ya definida para imprimir un string
-    	UB_LCD_2x16_String(3,1,"\176");
+    	UB_LCD_2x16_String(3,1,"\223 \177");
     	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
-    	UB_LCD_2x16_String(9,1,"       ");
+    	UB_LCD_2x16_String(9,1,"\223      ");
     	Delay(750);
 
     	/* Calcular error*/
@@ -294,11 +295,12 @@ int main(void)
     	 	 	 	 	}
 
 
-    	 /*
 
+
+
+    	// PARA VER EL CICLO DE TRABAJO (DUTY) EN TIEMPO REAL.... FUNCION PARA DEBUG
+    	/*
     	 sprintf(stringduty,"%d",duty);   // pasa de un entero a un String para imprimir
-
-
     	 UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	 UB_LCD_2x16_String(0,0,"Ciclo de trabajo:");
     	 UB_LCD_2x16_String(0,1,stringduty);
@@ -344,7 +346,7 @@ int32_t devolver_temperatura_en_grados()
 void iniciarPWM()
 {
          /*TIM_TimeBaseStructure.TIM_Prescaler = 1680 - 1;  // 84MHz/1680 = 50kHz
-         TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz */
+         TIM_TimeBaseStructure.TIM_Period = 1000 - 1; // 50KHz/1000 = 50 Hz    T=20mS */
 
 	    //PWM PWM PWM PWM PWM PWM PWM PWM PMW
 		/* Time base configuration */
