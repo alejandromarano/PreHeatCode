@@ -31,8 +31,6 @@
 #include "stm32f4xx_it.h"
 //#include "main.h"
 
-extern void devolver_temperatura_en_grados();
-extern void color_segun_temperatura();
 extern void TimingDelay_Decrement();
 /** @addtogroup STM32F4xx_StdPeriph_Examples
   * @{
@@ -149,7 +147,6 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   TimingDelay_Decrement();
-  //color_segun_temperatura(); // invoca la funcion de los led a gran velocidad
 }
 
 /******************************************************************************/

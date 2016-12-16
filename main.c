@@ -7,13 +7,6 @@
  *-PID (PROPORCIONAL)
  *-TECLADO
  *-MENU
- *
- *Falta implementar:
- *
- *
- *-MEDIDOR DE POTENCIA
- *
- *  Adelante y suerte
  */
 
 #include "stm32f4xx.h"
@@ -28,7 +21,7 @@
 #include "teclado.h"
 
 
-#define PID_PARAM_KP		3		/* Proporcional */  //PARAMETROS PID  //1    //6.06
+#define PID_PARAM_KP		1		/* Proporcional */  //PARAMETROS PID  //1    //6.06
 //#define PID_PARAM_KI		0.432		/* Integral */                        //0.05 //0.43
 //#define PID_PARAM_KD		21.21			/* Derivative */                      //0.25 //21.21
 
@@ -72,6 +65,7 @@ int main(void)
 	char stringtemperaturadeseada[4];       // String de temperatura deseada
 	char bufferteclado[4]={0,0,0,0};        // String Buffer de char para guardar los numeros tomados por teclado
 	char stringduty[4]={0,0,0,0};           // String de ciclo de trabajo
+	char stringpotencia[4]={0,0,0,0};       // String de potencia
 	int temperaturaporteclado[4]={0,0,0,0}, temperatura_deseada=0;
 	int i=0,flag=0,ingreso=0,zona_seleccionada=0;
 
@@ -118,7 +112,7 @@ int main(void)
 	UB_LCD_2x16_String(0,0,"Usted selecciono:");
 	sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);    // muestra la temperatura por pantalla
 	UB_LCD_2x16_String(0,1,stringtemperaturadeseada);
-	UB_LCD_2x16_String(3,1,"/223");
+	UB_LCD_2x16_String(3,1,"\337C");
 
 	Delay(2000);
 
@@ -126,7 +120,7 @@ int main(void)
 		{
 			UB_LCD_2x16_Clear();
 			UB_LCD_2x16_String(0,0,"Sobrecarga");
-			UB_LCD_2x16_String(0,1,"temp = 1000\223");
+			UB_LCD_2x16_String(0,1,"temp = 100\377C");
 			temperatura_deseada=1000;
 			sprintf(stringtemperaturadeseada,"%d",temperatura_deseada);
 			Delay(2000);
@@ -204,13 +198,12 @@ int main(void)
 	uint32_t duty; //   DUTY !!! (ciclo de trabajo)
 	int32_t pid_error=0;
 	uint32_t temperatura_actual=0;
-	//double errSum=0,lastErr=0;
+	                               //double errSum=0,lastErr=0;            PARAMETROS PID PARA IMPLEMENTACION FUTURA IMPLEMENTACION
 	int32_t kp=PID_PARAM_KP;      //,ki=PID_PARAM_KI,kd=PID_PARAM_KD;
-	//double dErr=0;
+	                              //double dErr=0;
 
-	while (1)
+	while (1)   //LOOP PRINCIPAL
     	{
-
 
 		/* promedio de 100 muestras para mantener el valor estable*/
 		for(i=0;i<100;i++)
@@ -229,17 +222,19 @@ int main(void)
     	UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
     	UB_LCD_2x16_String(0,0,"Temp actual:");
     	UB_LCD_2x16_String(0,1,stringtemperatura);    // usa una funcion ya definida para imprimir un string
-    	UB_LCD_2x16_String(3,1,"\223 \177");
-    	UB_LCD_2x16_String(5,1,stringtemperaturadeseada);
-    	UB_LCD_2x16_String(9,1,"\223      ");
+    	UB_LCD_2x16_String(3,1,"\337C");
+    	UB_LCD_2x16_String(6,1,"Set:");
+    	UB_LCD_2x16_String(10,1,stringtemperaturadeseada);
+    	UB_LCD_2x16_String(13,1,"\337C");
+
     	Delay(750);
 
     	/* Calcular error*/
     	pid_error = temperatura_deseada-temperatura_actual;
 
 
-//    	errSum+=(pid_error*0.001);
-//    	dErr=(pid_error-lastErr)/0.001;
+    												  //    	errSum+=(pid_error*0.001);      PARAMETROS PID PARA IMPLEMENTACION FUTURA IMPLEMENTACION
+    												  //    	dErr=(pid_error-lastErr)/0.001;
 
     	if(pid_error<0)
     	{
@@ -249,21 +244,22 @@ int main(void)
     	}
 
 
-    	duty   =   pid_error;   //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
+    	duty   =   pid_error;   		     //+   ki*errSum   +  kd*dErr;  // en esta version no hay parametros I y D
 
 
-    	duty   =  kp  * duty;
+    	duty   =  kp  * duty;               // FUNCION DE SALIDA (CICLO DE TRABAJO)
 
-//    	lastErr=pid_error;
+    										//    	lastErr=pid_error;
 
 
-    	 // Anti sobrecarga del duty
+    	// Anti sobrecarga del duty
     	if (duty > 100) {duty = 100;}
     	if (duty < 0)   {duty = 0;}
 
 
+    	// ADECUACION DE VALOR DE CICLO DE TRABAJO (DUTY)
     	duty   = (duty*1000);   // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
-    	duty   = (duty/100);
+    	duty   = (duty/300);    // VA 100
 
     	TIM_OCInitStructure.TIM_Pulse = duty; // DUTY !!! //pulse_length = ((TIM_Period + 1) * DutyCycle) / 100 - 1
 
@@ -281,7 +277,9 @@ int main(void)
     	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
     	}
 
-    	//printf(" %d  %d \n",temperatura_Actual,duty);  // !!!!!!! si no lo tenes en DEBUG!!! FRENA EL PROGRAMA!!!!
+
+    	// LED ROJO = CALENTANDO (DUTY > 0 )
+    	// LED AZUL = APAGADO (DUTY = 0 )
 
     	 if(duty==0)   //duty = 0
     		    	    {
@@ -295,29 +293,29 @@ int main(void)
     	 	 	 	 	}
 
 
-
-
-
     	// PARA VER EL CICLO DE TRABAJO (DUTY) EN TIEMPO REAL.... FUNCION PARA DEBUG
-    	/*
+
+    	 sprintf(stringpotencia,"%d",((500*zona_seleccionada)*(duty/100)));
     	 sprintf(stringduty,"%d",duty);   // pasa de un entero a un String para imprimir
     	 UB_LCD_2x16_Clear();                    //usa una funcion ya definida para limpiar las string
-    	 UB_LCD_2x16_String(0,0,"Ciclo de trabajo:");
+    	 UB_LCD_2x16_String(0,0,"Duty     Pot");
     	 UB_LCD_2x16_String(0,1,stringduty);
-    	 Delay(500); */
+    	 UB_LCD_2x16_String(9,1,stringpotencia);
+    	 UB_LCD_2x16_String(12,1,"    ");
+    	 Delay(750);
 
     	}
 	}
 
 
-void Delay(__IO uint32_t nTime)
+void Delay(__IO uint32_t nTime)   // FUNCION PARA EL SYSTICK
 {
   TimingDelay = nTime;
 
   while(TimingDelay != 0);
 }
 
-void TimingDelay_Decrement(void)
+void TimingDelay_Decrement(void) // FUNCION PARA EL SYSTICK
 {
   if (TimingDelay != 0)
   {
